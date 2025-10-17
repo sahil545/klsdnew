@@ -1,0 +1,189 @@
+import { promises as fs } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { getResponsiveImage } from "../lib/supabase-images";
+import { supabaseAdmin } from "../lib/supabaseAdmin";
+
+type ImageConfig = {
+  key: string;
+  sourceUrl: string;
+  width: number;
+  height: number;
+  targetPath?: string;
+};
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const images: ImageConfig[] = [
+  {
+    key: "logo",
+    sourceUrl:
+      "https://fjrbcurymmoezsthdpar.supabase.co/storage/v1/object/public/wordpress_images/key-largo-scuba-diving-logo.png",
+    width: 240,
+    height: 80,
+    targetPath: "home/logo/key-largo-scuba-diving-logo.png",
+  },
+  {
+    key: "heroPrimary",
+    sourceUrl:
+      "https://fjrbcurymmoezsthdpar.supabase.co/storage/v1/object/public/wordpress_images/key-largo-scuba-diving.jpg",
+    width: 1920,
+    height: 750,
+    targetPath: "home/heroPrimary/key-largo-scuba-diving.jpg",
+  },
+  {
+    key: "heroProduct",
+    sourceUrl:
+      "https://cdn.builder.io/api/v1/image/assets%2F2a778920e8d54a37b1576086f79dd676%2F198e7a8298c647d3a3d8a31c569f2887?format=webp&width=1600",
+    width: 1600,
+    height: 1200,
+  },
+  {
+    key: "unsplashReefWide",
+    sourceUrl:
+      "https://images.unsplash.com/photo-1583212292454-1fe6229603b7?auto=format&fit=crop&w=2070&q=80",
+    width: 2070,
+    height: 1380,
+  },
+  {
+    key: "unsplashDiversWide",
+    sourceUrl:
+      "https://images.unsplash.com/photo-1559827260-dc66d52bef19?auto=format&fit=crop&w=2070&q=80",
+    width: 2070,
+    height: 1380,
+  },
+  {
+    key: "unsplashPortraitTraining",
+    sourceUrl:
+      "https://images.unsplash.com/photo-1566024287286-457247b70310?auto=format&fit=crop&w=1200&q=80",
+    width: 1200,
+    height: 1600,
+  },
+  {
+    key: "unsplashCoralPortrait",
+    sourceUrl:
+      "https://images.unsplash.com/photo-1526498460520-4c246339dccb?auto=format&fit=crop&w=1600&q=80",
+    width: 1600,
+    height: 2000,
+  },
+  {
+    key: "christStatue",
+    sourceUrl:
+      "https://cdn.builder.io/api/v1/image/assets%2F2a778920e8d54a37b1576086f79dd676%2F04a13ecb14db49a29892aec49c9d3466?format=webp&width=1600",
+    width: 1600,
+    height: 1067,
+    targetPath:
+      "home/christStatue/christ-of-the-abyss-statue-dive-trip-key-largo-florida-keys.jpg",
+  },
+  {
+    key: "wpTryScuba",
+    sourceUrl:
+      "https://fjrbcurymmoezsthdpar.supabase.co/storage/v1/object/public/wordpress_images/best-key-largo-dive-shop.jpg",
+    width: 1600,
+    height: 1067,
+  },
+  {
+    key: "wpDiveInOneDay",
+    sourceUrl:
+      "https://fjrbcurymmoezsthdpar.supabase.co/storage/v1/object/public/wordpress_images/key-largo-scuba-diving-dive-trips-1.jpg",
+    width: 1600,
+    height: 1067,
+  },
+  {
+    key: "wpDiveShop",
+    sourceUrl:
+      "https://fjrbcurymmoezsthdpar.supabase.co/storage/v1/object/public/wordpress_images/dive-shop-in-key-largo.jpg",
+    width: 1600,
+    height: 1067,
+  },
+  {
+    key: "wpSnorkelingHero",
+    sourceUrl:
+      "https://fjrbcurymmoezsthdpar.supabase.co/storage/v1/object/public/wordpress_images/key-largo-snorkeling-tours.jpg",
+    width: 1920,
+    height: 1080,
+  },
+  {
+    key: "wpHydrosPro",
+    sourceUrl:
+      "https://fjrbcurymmoezsthdpar.supabase.co/storage/v1/object/public/wordpress_images/scubapro-hydros-pro-bcd.jpg",
+    width: 1600,
+    height: 1067,
+  },
+  {
+    key: "wpHowToScuba",
+    sourceUrl:
+      "https://fjrbcurymmoezsthdpar.supabase.co/storage/v1/object/public/wordpress_images/how-to-go-scuba-diving.jpg",
+    width: 1600,
+    height: 1067,
+  },
+];
+
+async function ensureDirectory(dir: string) {
+  try {
+    await fs.mkdir(dir, { recursive: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
+      throw error;
+    }
+  }
+}
+
+async function ensureBucketExists(bucket: string) {
+  const supabase = supabaseAdmin();
+  const { data, error } = await supabase.storage.listBuckets();
+  if (error) {
+    throw error;
+  }
+
+  const exists = (data || []).some((b) => b.name === bucket);
+  if (exists) return;
+
+  const { error: createError } = await supabase.storage.createBucket(bucket, {
+    public: true,
+    fileSizeLimit: null,
+  });
+
+  if (createError && createError.status !== 409) {
+    throw createError;
+  }
+}
+
+async function main() {
+  await ensureBucketExists(
+    process.env.SUPABASE_IMAGES_BUCKET?.trim() || "images",
+  );
+
+  const results: Record<string, string> = {};
+
+  for (const image of images) {
+    const data = await getResponsiveImage({
+      sourceUrl: image.sourceUrl,
+      width: image.width,
+      height: image.height,
+      namespace: "home",
+      cacheKey: image.key,
+      targetPath: image.targetPath,
+    });
+
+    results[image.key] = data.defaultSrc;
+  }
+
+  const outDir = path.resolve(__dirname, "../lib/generated");
+  await ensureDirectory(outDir);
+
+  const outFile = path.join(outDir, "home-images.ts");
+  const fileHeader = `// Auto-generated by scripts/ingest-home-images.ts\n// Do not edit manually.\n`;
+  const fileBody = `export const HOME_IMAGES = ${JSON.stringify(results, null, 2)} as const;\n`;
+  await fs.writeFile(outFile, fileHeader + fileBody, "utf8");
+
+  console.log(
+    `✅ Wrote ${Object.keys(results).length} image mappings to ${outFile}`,
+  );
+}
+
+main().catch((error) => {
+  console.error("❌ Failed to ingest home images", error);
+  process.exit(1);
+});

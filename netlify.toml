@@ -1,0 +1,188 @@
+# -------------------------------------------------------------------
+# Build Configuration
+# -------------------------------------------------------------------
+[build]
+  command = "npm run build:production"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "18"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# -------------------------------------------------------------------
+# Global Security Headers
+# -------------------------------------------------------------------
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-XSS-Protection = "1; mode=block"
+
+# -------------------------------------------------------------------
+# WordPress / WooCommerce Reverse Proxy Setup
+# -------------------------------------------------------------------
+
+# ------------ WordPress admin & login ------------
+[[redirects]]
+  from = "/wp-admin/*"
+  to = "https://wp.keylargoscubadiving.com/wp-admin/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/wp-login.php"
+  to = "https://wp.keylargoscubadiving.com/wp-login.php"
+  status = 200
+  force = true
+
+# ------------ WP core & assets ------------
+[[redirects]]
+  from = "/wp-includes/*"
+  to = "https://wp.keylargoscubadiving.com/wp-includes/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/wp-content/*"
+  to = "https://wp.keylargoscubadiving.com/wp-content/:splat"
+  status = 200
+  force = true
+
+# ------------ AJAX & REST API ------------
+[[redirects]]
+  from = "/wp-admin/admin-ajax.php"
+  to = "https://wp.keylargoscubadiving.com/wp-admin/admin-ajax.php"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/wp-json/*"
+  to = "https://wp.keylargoscubadiving.com/wp-json/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/wc-api/*"
+  to = "https://wp.keylargoscubadiving.com/wc-api/:splat"
+  status = 200
+  force = true
+
+# ------------ WooCommerce AJAX (critical for cart, checkout, coupon) ------------
+[[redirects]]
+  from = "/"
+  query = { wc-ajax = ":action" }
+  to = "https://wp.keylargoscubadiving.com/?wc-ajax=:action"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  query = { wc-ajax = ":action" }
+  to = "https://wp.keylargoscubadiving.com/?wc-ajax=:action"
+  status = 200
+  force = true
+
+# ------------ WooCommerce core pages ------------
+[[redirects]]
+  from = "/cart/*"
+  to = "https://wp.keylargoscubadiving.com/cart/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/checkout/*"
+  to = "https://wp.keylargoscubadiving.com/checkout/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/my-account/*"
+  to = "https://wp.keylargoscubadiving.com/my-account/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/order/*"
+  to = "https://wp.keylargoscubadiving.com/order/:splat"
+  status = 200
+  force = true
+
+# ------------ Add-to-cart passthroughs ------------
+[[redirects]]
+  from = "/"
+  query = { add-to-cart = ":id" }
+  to = "https://wp.keylargoscubadiving.com/?add-to-cart=:id"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  query = { add-to-cart = ":id" }
+  to = "https://wp.keylargoscubadiving.com/?add-to-cart=:id"
+  status = 200
+  force = true
+
+# ------------ SEO endpoints (robots, sitemaps) ------------
+[[redirects]]
+  from = "/robots.txt"
+  to = "https://wp.keylargoscubadiving.com/robots.txt"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/sitemap.xml"
+  to = "https://wp.keylargoscubadiving.com/sitemap.xml"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/sitemap_index.xml"
+  to = "https://wp.keylargoscubadiving.com/sitemap_index.xml"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/sitemap-:rest"
+  to = "https://wp.keylargoscubadiving.com/sitemap-:rest"
+  status = 200
+  force = true
+
+# -------------------------------------------------------------------
+# Cache Controls — Disable caching for dynamic Woo pages
+# -------------------------------------------------------------------
+[[headers]]
+  for = "/cart/*"
+  [headers.values]
+    Cache-Control = "no-store"
+
+[[headers]]
+  for = "/checkout/*"
+  [headers.values]
+    Cache-Control = "no-store"
+
+[[headers]]
+  for = "/my-account/*"
+  [headers.values]
+    Cache-Control = "no-store"
+
+# -------------------------------------------------------------------
+# Cache Controls — Allow caching for static marketing pages
+# -------------------------------------------------------------------
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "public, max-age=600, s-maxage=600"
+
+# -------------------------------------------------------------------
+# Catch-all — ensure unmatched routes render via Next.js
+# -------------------------------------------------------------------
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false
